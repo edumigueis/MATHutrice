@@ -3,7 +3,7 @@ name = "mathutrice"
 version = "0.1.0"
 description = "LLM-based tutor that helps EPF first-year students practise mathematical tools."
 license = "MIT"
-requires-python = ">=3.14,<3.15"
+requires-python = ">=3.10,<3.15"
 dependencies = [
     "mistralai==1.12.3",
     "openai==3.14.1",
