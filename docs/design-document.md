@@ -1,4 +1,6 @@
-# Design Document — Eduardo Migueis (MATHutrice)
+# Design Document v1 — Eduardo Migueis (MATHutrice)
+
+v0 is kept in `design-document-v0.md` (post it as a comment on the issue). v1 gives each non-functional requirement a number and its source.
 
 Draft kept in the fork. To publish: open it as a public issue on EPF-MDE/MATHutrice titled
 "Design Document — Eduardo Migueis", link that issue from the README, and post the questions
@@ -62,3 +64,16 @@ The **question generator**: the single place where "a question for this competen
 - Measure the real latency per call (replaces the 5 s assumption).
 - Read the Mistral limits and date them.
 - Choose and defend the assumption on the wait (60 s? progress bar? pre-generation?).
+
+## 4. Non-functional requirements, v1 (numbers and sources)
+
+| NF requirement | Number | Source |
+|----------------|--------|--------|
+| Wait for an evaluation test (10 questions) | **≤ 60 s**, even if each LLM call takes 10 s (twice my 5 s estimate) | Assumption, from section 2: sequential code gives ≈ 50 s at 5 s/call and ≈ 100 s at 10 s/call; 60 s is what a student will sit through with a spinner. To confirm with the product owner (question 1) |
+| Calls in flight to the LLM | **≤ 4 at once** | Assumption, below the free-tier request rate; to replace by the Mistral Limits page value (read on the day, not yet read) |
+| Longest a single LLM call may hold a request | **30 s** (today: 600 s SDK default, `llm_client.py`) | Assumption: 3× the typical 10 s call |
+| Attempts per question on invalid JSON | **3** | Existing `MAX_RETRIES` in `base_generator.py:35` |
+| A failed question | never fails the whole test | Assumption: a test with 9 of 10 questions beats an error page |
+| Concurrent students | 30 | Assumption, question 2 |
+
+Seam: the `question_generation` package (see the Spec). 10 questions at 10 s/call, 4 at once: 3 rounds ≈ 30 s, inside the 60 s budget with room for one retry round.
