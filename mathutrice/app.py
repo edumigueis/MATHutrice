@@ -32,7 +32,6 @@ import hmac
 import random
 import traceback
 from datetime import datetime, timedelta
-from mathutrice.question_generation._internal._generate import generate_questions
 
 load_dotenv()
 

@@ -1,8 +1,8 @@
 """Acceptance tests for mathutrice.question_generation (Spec: 10 questions in <= 60 s).
 
-Time is scaled by 1/50 so the suite stays fast: a "10 s" LLM call sleeps 0.2 s,
-and the 60 s budget becomes 1.2 s. Sequential generation of 10 such calls takes
-2.0 s and fails; four at a time takes 0.6 s.
+Time is scaled by 1/10 so the suite stays fast: a "10 s" LLM call sleeps 1 s,
+and the 60 s budget becomes 6 s. Sequential generation of 10 such calls takes
+10 s and fails; four at a time takes 3 s.
 """
 
 import json
@@ -11,7 +11,7 @@ import time
 
 from mathutrice.question_generation import generate_questions
 
-SCALE = 1 / 50
+SCALE = 1 / 10
 CALL_SECONDS = 10 * SCALE
 BUDGET_SECONDS = 60 * SCALE
 

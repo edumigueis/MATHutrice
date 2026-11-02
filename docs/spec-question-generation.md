@@ -17,7 +17,7 @@ Threads, the cap on concurrent LLM calls, the per-call timeout, the retry on inv
 - A call exceeding `call_timeout` is abandoned: the caller gets `None` at that position after about `call_timeout` seconds. (The abandoned thread ends when the LLM does.)
 
 ## Acceptance criterion (my number)
-**10 questions are returned in at most 60 s when every LLM call takes 10 s** (tests run it at 1/50 scale: 10 calls of 0.2 s in under 1.2 s; the sequential code takes 2.0 s and fails).
+**10 questions are returned in at most 60 s when every LLM call takes 10 s** (tests run it at 1/10 scale: 10 calls of 1 s in under 6 s; the sequential code takes 10 s and fails).
 
 ## Out of scope
 Wiring `generate_mixed_test` and `POST /session/evaluation` to this module (next step); making the endpoint non-blocking for other users; token limits and the Mistral rate limit (Limits page not yet read).
