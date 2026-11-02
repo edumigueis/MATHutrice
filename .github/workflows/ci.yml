@@ -5,7 +5,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [course-2026]
+    branches: [course-2026-clean]
 
 jobs:
   architecture:
@@ -20,14 +20,6 @@ jobs:
         run: uv run tach check
       - name: No import cycle between packages
         run: uv run python scripts/check_cycles.py
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync --locked
-      - run: uv run pytest
 
   test:
     runs-on: ubuntu-latest
