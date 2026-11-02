@@ -1,57 +1,66 @@
-from mathutrice.database import engine
-from sqlmodel import Session, SQLModel
+"""Seed the database with the notions and competences of the referentiel.
+
+Run from the repository root: python -m mathutrice.fonctions_python.seed
+Idempotent: rows that already exist are left alone.
+"""
+
+from uuid import NAMESPACE_URL, uuid5
+
+from sqlmodel import Session, SQLModel, select
+
 from mathutrice import models
+from mathutrice.database import engine
+from mathutrice.referentiel import REFERENTIEL
 
-# Crée toutes les tables
-SQLModel.metadata.create_all(engine)
 
-notions = [
-    (
-        "trigonometrie",
-        "Trigonométrie",
-        "Étude des fonctions trigonométriques, des angles et du cercle trigonométrique.",
-    ),
-    (
-        "fractions_puissances_radicaux",
-        "Fractions – Puissances – Radicaux",
-        "Manipulation des fractions, puissances et radicaux.",
-    ),
-    (
-        "logarithme_exponentielle",
-        "Logarithme et exponentielle",
-        "Étude des fonctions logarithme et exponentielle.",
-    ),
-    (
-        "manipulation_expressions_litterales",
-        "Manipulation d'expressions littérales",
-        "Isolement et manipulation de variables dans des expressions algébriques.",
-    ),
-    (
-        "equations_inequations",
-        "Équations – Inéquations",
-        "Résolution d'équations et d'inéquations du premier et second degré.",
-    ),
-    (
-        "polynomes_factorisation",
-        "Polynômes – Factorisation",
-        "Étude des polynômes, factorisation et identités remarquables.",
-    ),
-    (
-        "analyse_dimensionnelle",
-        "Analyse dimensionnelle",
-        "Dimensions, unités et homogénéité des formules physiques.",
-    ),
-]
+def _uuid(kind: str, key: str):
+    # Deterministic, so a re-seed (or a second machine) yields the same ids.
+    return uuid5(NAMESPACE_URL, f"mathutrice:{kind}:{key}")
 
-with Session(engine) as session:
-    for notion_id, title, description in notions:
-        existing = session.get(models.Notion, notion_id)
-        if not existing:
-            notion = models.Notion(
-                notion_id=notion_id,
-                title=title,
-                description=description,
-            )
-            session.add(notion)
-    session.commit()
-    print("Notions insérées.")
+
+def seed() -> tuple[int, int]:
+    SQLModel.metadata.create_all(engine)
+    new_notions = new_competences = 0
+
+    with Session(engine) as session:
+        for notion_key, notion_data in REFERENTIEL.items():
+            notion = session.exec(
+                select(models.Notion).where(
+                    models.Notion.referentiel_key == notion_key
+                )
+            ).first()
+            if notion is None:
+                notion = models.Notion(
+                    notion_id=_uuid("notion", notion_key),
+                    referentiel_key=notion_key,
+                    title=notion_data["notion_nom"],
+                    description=notion_data["notion_nom"],
+                )
+                session.add(notion)
+                new_notions += 1
+
+            for comp in notion_data["competences"]:
+                exists = session.exec(
+                    select(models.Competence).where(
+                        models.Competence.referentiel_code == comp["code"]
+                    )
+                ).first()
+                if exists is None:
+                    session.add(
+                        models.Competence(
+                            competence_id=_uuid("competence", comp["code"]),
+                            referentiel_code=comp["code"],
+                            title=comp["nom"],
+                            level=comp["niveau"],
+                            notion_id=notion.notion_id,
+                        )
+                    )
+                    new_competences += 1
+        session.commit()
+
+    return new_notions, new_competences
+
+
+if __name__ == "__main__":
+    notions, competences = seed()
+    print(f"Seeded {notions} notions and {competences} competences.")
