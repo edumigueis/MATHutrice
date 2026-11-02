@@ -13,64 +13,62 @@ To provide an optimal learning experience, the application offers a clear and in
 
 ---
 
-## Running Locally
+## Running locally
 
-Follow these steps to run the application on your machine.
+Requires [uv](https://docs.astral.sh/uv/). It installs the Python version in `.python-version` and the dependency versions in `uv.lock`.
 
-### 1. Prerequisites
-- **Python 3.10+**
-
-### 2. Install Dependencies
-Clone the repository and install the required Python packages:
-
-```bash
-pip install -r requirements.txt
+```sh
+git clone -b course-2026 <your fork URL> mathutrice
+cd mathutrice
+uv sync
+cp .env.example .env      # then set LLM_API_KEY in .env
+uv run python -m mathutrice.fonctions_python.seed   # notions and competences
+uv run uvicorn mathutrice.app:app --port 8000
 ```
 
-### 3. Environment Variables
-Create a .env file in the root directory. You will need to define your environment variables here (see the Development Sign-in section below for authentication variables).
+Then open <http://localhost:8000/>. To check that everything works, follow [docs/smoke-test.md](docs/smoke-test.md).
 
-### 4. Start the Application
-Start the server locally using uvicorn:
+### Environment variables
 
-```bash
-uvicorn main:app --reload
+`.env.example` lists every setting with its default; `.env` is git-ignored, so a key never reaches a commit.
+
+- `LLM_API_KEY` (required): key for the LLM endpoint. The default endpoint is Mistral (<https://console.mistral.ai>, a free account works). The application refuses to start without it.
+- `LLM_BASE_URL`, `LLM_MODEL`: the OpenAI-compatible endpoint and its model.
+- `DATABASE_URL`: SQLite file by default (`sqlite:///./mathutrice.db`), created in the directory you start from.
+- `SESSION_SECRET` (required): signs session cookies.
+- `AUTH_MODE`: `dev` (default in `.env.example`) or `entra`. When unset, it defaults to `entra`.
+
+### Seeding the database
+
+Modules and training need the notions and competences of the referentiel in the database. The seed script creates them from `mathutrice/referentiel.py`, and can be re-run safely:
+
+```sh
+uv run python -m mathutrice.fonctions_python.seed
 ```
 
-### Verification
-To ensure your local clone is running and configured correctly, please run through the checks outlined in docs/smoke-test.md.
+### Architecture check
 
-## sDevelopment Sign-in (Forks & Non-Entra Environments)
-For local development or when working on forks outside of the production Entra ID environment, you can use the development authentication mode.
+Package boundaries are enforced; see [mathutrice/README.md](mathutrice/README.md).
 
-### Configuration
-Set the following variables in your .env file:
-```
-AUTH_MODE=dev (Note: This defaults to entra in production).
-
-DEV_LOGIN_KEY: A custom secret key you choose to authenticate locally.
-
-REDIRECT_URL: The URL to redirect to after a successful login (e.g., http://localhost:8000).
-
-POST_LOGOUT_REDIRECT_URL: The URL to redirect to after logging out.
-
-SESSION_SECRET: The secret string used to sign session cookies.
+```sh
+uv run tach check
+uv run python scripts/check_cycles.py
 ```
 
-⚠️ SESSION_SECRET Caveat:
-If SESSION_SECRET uses a predictable placeholder value (which is common in development), anyone can forge a session cookie and completely bypass the DEV_LOGIN_KEY requirement. Never use a placeholder for SESSION_SECRET in a public-facing or production environment.
+## Development sign-in (forks and non-Entra environments)
 
-### Scripted Sign-in (cURL)
-If you are testing APIs or scripting interactions, you can authenticate via POST /dev/login and store the session cookie to maintain state across requests:
+With `AUTH_MODE=dev`, `/dev/login` signs you in as any `@epfedu.fr` address and role (Student, Teacher or Admin), with no proof of identity. Never use it in production.
 
-```bash
-# 1. Log in and save the session cookie to 'cookie.txt'
-curl -X POST http://localhost:8000/dev/login \
-     -H "Content-Type: application/x-www-form-urlencoded" \
-     -d "key=YOUR_DEV_LOGIN_KEY" \
-     -c cookie.txt
+- `DEV_LOGIN_KEY`: optional shared key protecting the sign-in page. Empty means no key.
+- `SESSION_SECRET`: if it keeps the placeholder value of `.env.example`, anyone can forge a session cookie, so replace it with a random secret on any deployed environment.
+- `REDIRECT_URL`, `POST_LOGOUT_REDIRECT_URL`: only used with `AUTH_MODE=entra`.
 
-# 2. Use the saved cookie for subsequent authenticated requests
-curl -X GET http://localhost:8000/api/some-protected-route \
-     -b cookie.txt
+### Scripted sign-in (curl)
+
+```sh
+# Sign in and save the session cookie
+curl -c cookie.txt -d "email=student@epfedu.fr" -d "role=Student" -d "key=YOUR_DEV_LOGIN_KEY"      http://localhost:8000/dev/login
+
+# Use it on later requests
+curl -b cookie.txt http://localhost:8000/
 ```
